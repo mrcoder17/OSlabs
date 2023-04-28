@@ -1,52 +1,43 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #define PAGE_SIZE 4096
+#define PAGEMAP_LENGTH 8
 
 int main(int argc, char *argv[]) {
-    // Проверяем, что передан единственный аргумент - PID процесса
     if (argc != 2) {
-        printf("Usage: %s <PID>\n", argv[0]);
-        return 1;
+        perror("argc err");
+        exit(1);
     }
-    // Открываем файл /proc/<PID>/pagemap
+
     char pagemap_path[256];
-    snprintf(pagemap_path, sizeof(pagemap_path), "/proc/%s/pagemap", argv[1]);
-    FILE *fp = fopen(pagemap_path, "rb");
-    if (fp == NULL) {
-        printf("Failed to open %s\n", pagemap_path);
-        return 1;
+    sprintf(pagemap_path, "/proc/%s/pagemap", argv[1]);
+
+    int fd = open(pagemap_path, O_RDONLY);
+    if (fd == -1) {
+        perror("open err");
+        exit(1);
     }
-    // Читаем содержимое файла постранично
-    unsigned long long page_frame_number;
-    unsigned long long page_flags;
-    int page_count = 0;
-    while (fread(&page_frame_number, sizeof(page_frame_number), 1, fp) == 1) {
-        // Получаем номер фрейма страницы
-        unsigned long long page_number = page_count * PAGE_SIZE / sizeof(page_frame_number);
-        // Получаем флаги страницы
-        page_flags = 0;
-        if (page_frame_number & (1ull << 63)) {
-            page_flags |= (1 << 0); // Present
-        }
-        if (page_frame_number & (1ull << 62)) {
-            page_flags |= (1 << 1); // Soft-dirty
-        }
-        if (page_frame_number & (1ull << 61)) {
-            page_flags |= (1 << 2); // Exclusive
-        }
-        if (page_frame_number & (1ull << 55)) {
-            page_flags |= (1 << 3); // Swap
-        }
-        if (page_frame_number & (1ull << 51)) {
-            page_flags |= (1 << 4); // File
-        }
-        // Выводим информацию о странице
-        printf("Page %d: frame=%llu flags=%llu\n", page_number, page_frame_number & ((1ull << 55) - 1), page_flags);
-        page_count++;
+
+    uint64_t pagemap_entry;
+    ssize_t bytes_read;
+    uint64_t page_frame_number;
+    uint64_t page_flags;
+
+    while ((bytes_read = read(fd, &pagemap_entry, PAGEMAP_LENGTH)) == PAGEMAP_LENGTH) {
+        page_frame_number = pagemap_entry & 0x7fffffffffffff;
+        page_flags = pagemap_entry >> 55;
+        printf("frame num: %lu flags: %lu\n", page_frame_number, page_flags);
     }
-    // Закрываем файл
-    fclose(fp);
+
+    if (bytes_read == -1) {
+        perror("read err");
+        exit(1);
+    }
+    close(fd);
     return 0;
 }
