@@ -61,7 +61,9 @@ void copy_regular_file(const char *src_path, const char *dest_path) {
         off_t remaining_bytes = file_size - bytes_read;
         size_t bytes_to_read = (remaining_bytes < BUFFER_SIZE) ? remaining_bytes : BUFFER_SIZE;
 
-        off_t offset = lseek(src_fd, -bytes_to_read, SEEK_CUR);
+//        off_t offset = lseek(src_fd, -bytes_to_read, SEEK_CUR);
+        off_t offset = lseek(src_fd, -(bytes_read + bytes_to_read), SEEK_END);
+
         if (offset == -1) {
             perror("lseek err");
             exit(1);
@@ -83,6 +85,8 @@ void copy_regular_file(const char *src_path, const char *dest_path) {
         }
         bytes_read += bytes_read_now;
     }
+    close(src_fd);
+    close(dest_fd);
 }
 
 void copy_reverse_dir(char *src_path, char *dest_path){
@@ -118,7 +122,6 @@ void copy_reverse_dir(char *src_path, char *dest_path){
             copy_regular_file(sub_path, sub_dest_path);
         }
     }
-
     closedir(dir);
 }
 
