@@ -28,9 +28,9 @@ int main (int argc, char** argv){
 
         default:
             if (wait(&status) == -1){
-	        perror("wait error");
+	            perror("wait error");
                 exit(1);
-	    }
+            }
 
             while (!WIFEXITED(status)) {
                 if (ptrace(PTRACE_SYSCALL, my_id, NULL, NULL) == -1) {
@@ -38,7 +38,7 @@ int main (int argc, char** argv){
                     exit(1);
                 }
 
-		if (wait(&status) == -1){
+		        if (wait(&status) == -1){
                     perror("wait error");
                     exit(1);
                 }
