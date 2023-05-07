@@ -1,3 +1,0 @@
-/home/poor_daddy/OSterm1/files/lab2/cmake-build-debug/CMakeFiles/lab2.dir
-/home/poor_daddy/OSterm1/files/lab2/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/poor_daddy/OSterm1/files/lab2/cmake-build-debug/CMakeFiles/rebuild_cache.dir
