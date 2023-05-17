@@ -54,6 +54,7 @@ int main() {
     }
 
     if (waitpid(child_pid, NULL, 0) == -1) {
+        munmap(stack, STACK_SIZE);
         perror("waitpid error");
         return 1;
     }
