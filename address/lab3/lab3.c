@@ -132,60 +132,12 @@ void test2(){
     my_free(buffer5);
 }
 
-void test3(){
-    void* buffer1 = malloc(100);
-    void* buffer2 = malloc(100);
-    void* buffer3 = malloc(100);
-    void* buffer4 = malloc(100);
-
-    printf("test 1 buffer1: %p\n", buffer1);
-    printf("test 1 buffer2: %p\n", buffer2);
-    printf("test 1 buffer3: %p\n", buffer3);
-    printf("test 1 buffer4: %p\n", buffer4);
-
-    free(buffer2);
-    free(buffer3);
-
-    void* buffer5 = malloc(150);
-    printf("test 1 buffer5: %p\n", buffer5);
-    free(buffer1);
-    free(buffer4);
-    free(buffer5);
-}
-
-void test4(){
-    void* buffer1 = malloc(100);
-    void* buffer2 = malloc(100);
-    void* buffer3 = malloc(100);
-    void* buffer4 = malloc(100);
-
-    printf("test 2 buffer1: %p\n", buffer1);
-    printf("test 2 buffer2: %p\n", buffer2);
-    printf("test 2 buffer3: %p\n", buffer3);
-    printf("test 2 buffer4: %p\n", buffer4);
-
-    free(buffer2);
-    free(buffer3);
-
-    void* buffer5 = malloc(250);
-    printf("test 2 buffer5: %p\n", buffer5);
-    free(buffer1);
-    free(buffer4);
-    free(buffer5);
-}
-
 int main() {
     printf("test 1. 150 by my_malloc\n");
     test1();
 
     printf("test 2. 250 by my_malloc\n");
     test2();
-
-    printf("test 3. 150 by malloc\n");
-    test3();
-
-    printf("test 4. 250 by malloc\n");
-    test4();
 
     printf("\n%d\n", getpid());
     sleep(1000);
