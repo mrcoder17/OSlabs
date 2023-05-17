@@ -2,14 +2,12 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#include <sys/types.h>
 #include <sys/wait.h>
 #include <string.h>
 #include <sched.h>
 #include <fcntl.h>
 
 #define STACK_SIZE (1024 * 1024)
-
 
 void recursive_func(int counter) {
     char hello[] = "hello world";
