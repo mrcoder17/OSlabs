@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -13,55 +14,35 @@ typedef struct Block {
 } Block;
 
 Block* free_list = NULL;
-
-Block* get_last_region() {
-    Block* current = free_list;
-    while (current->next != NULL) {
-        current = current->next;
-    }
-    return current;
-}
-
-Block* find_free_block(size_t size) {
-    Block* current = free_list;
-    while (current != NULL) {
-        if (current->is_free && current->size >= size) {
-            return current;
-        }
-        current = current->next;
-    }
-    return NULL;
-}
+void* initial_region = NULL;
 
 void* my_malloc(size_t size) {
-    size_t block_size = size + sizeof(Block);
-    Block* block = find_free_block(block_size);
-
-    if (block) {
-        block->is_free = 0;
-        return (void*)((char*)block + sizeof(Block));
-    }
-
-    size_t region_size = block_size > REGION_SIZE ? block_size : REGION_SIZE;
-    Block* new_region = mmap(NULL, region_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (new_region == MAP_FAILED) {
+    if (size == 0) {
         return NULL;
     }
 
-    new_region->size = region_size - sizeof(Block);
-    new_region->is_free = 0;
-    new_region->next = NULL;
-    new_region->prev = NULL;
-
-    if (!free_list) {
-        free_list = new_region;
-    } else {
-        Block* last_region = get_last_region();
-        last_region->next = new_region;
-        new_region->prev = last_region;
+    Block* current = free_list;
+    while (current != NULL) {
+        if (current->is_free && current->size >= size) {
+            if (current->size > size + sizeof(Block)) {
+                Block* new_block = (Block*)((char*)current + sizeof(Block) + size);
+                new_block->size = current->size - size - sizeof(Block);
+                new_block->is_free = 1;
+                new_block->next = current->next;
+                new_block->prev = current;
+                if (current->next != NULL) {
+                    current->next->prev = new_block;
+                }
+                current->next = new_block;
+                current->size = size;
+            }
+            current->is_free = 0;
+            return (void*)((char*)current + sizeof(Block));
+        }
+        current = current->next;
     }
 
-    return (void*)((char*)new_region + sizeof(Block));
+    return NULL;
 }
 
 void my_free(void* ptr) {
@@ -69,24 +50,46 @@ void my_free(void* ptr) {
         return;
     }
 
-    Block* block = (Block*)ptr - 1;
+    Block* block = (Block*)((char*)ptr - sizeof(Block));
     block->is_free = 1;
 
-    if (block->prev && block->prev->is_free) {
+    if (block->prev != NULL && block->prev->is_free) {
         block->prev->size += block->size + sizeof(Block);
         block->prev->next = block->next;
-        if (block->next) {
+        if (block->next != NULL) {
             block->next->prev = block->prev;
         }
         block = block->prev;
     }
 
-    if (block->next && block->next->is_free) {
+    if (block->next != NULL && block->next->is_free) {
         block->size += block->next->size + sizeof(Block);
         block->next = block->next->next;
-        if (block->next) {
+        if (block->next != NULL) {
             block->next->prev = block;
         }
+    }
+}
+
+void initialize_region() {
+    initial_region = mmap(NULL, REGION_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (initial_region == MAP_FAILED) {
+        perror("mmap");
+        exit(1);
+    }
+
+    free_list = (Block*)initial_region;
+    free_list->size = REGION_SIZE - sizeof(Block);
+    free_list->is_free = 1;
+    free_list->next = NULL;
+    free_list->prev = NULL;
+}
+
+void cleanup_region() {
+    if (initial_region != NULL) {
+        munmap(initial_region, REGION_SIZE);
+        initial_region = NULL;
+        free_list = NULL;
     }
 }
 
@@ -106,6 +109,7 @@ void test1(){
 
     void* buffer5 = my_malloc(150);
     printf("test 1 buffer5: %p\n", buffer5);
+
     my_free(buffer1);
     my_free(buffer4);
     my_free(buffer5);
@@ -126,20 +130,22 @@ void test2(){
     my_free(buffer3);
 
     void* buffer5 = my_malloc(250);
+    
     printf("test 2 buffer5: %p\n", buffer5);
+
     my_free(buffer1);
     my_free(buffer4);
     my_free(buffer5);
 }
 
 int main() {
-    printf("test 1. 150 by my_malloc\n");
-    test1();
+    initialize_region();
 
-    printf("test 2. 250 by my_malloc\n");
+    printf("test1. 150 by my_malloc\n");
+    test1();
+    printf("test2. 250 by my_malloc\n");
     test2();
 
-    printf("\n%d\n", getpid());
-    sleep(1000);
+    cleanup_region();
     return 0;
 }
